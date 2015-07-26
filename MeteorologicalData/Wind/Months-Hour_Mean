@@ -1,0 +1,20 @@
+## First download the CSV file of Wind Velocity data from "Los Angeles - 21 de Mayo" Station (http://sinca.mma.gob.cl/)
+library(dplyr)
+library(ggplot2)
+v<-read.csv("datos_130117_150724_LA_21mayo.csv",sep=";",header = FALSE,dec=",",stringsAsFactors =F)
+info<-v[1:4,]
+v2<-v[-(1:4),]
+fecha<-as.Date(v2[,1],"%y%m%d")
+v2[,1]<-fecha
+x<-strptime(paste(v2[,1],v2[,2]),"%Y-%m-%d %H%M")
+v2[,1]<-substr(x,6,7)  # extract month
+v2[,2]<-substr(x,11,13) # extract hour
+y<-aggregate(V3 ~ V1 + V2, data = v2, mean)
+names(y)[1]<-"mes"
+names(y)[2]<-"hora"
+names(y)[3]<-"vel"
+#plot
+gg1<-qplot(hora,vel,data=y)
+gg1 + geom_line()+geom_point(size=1,col=4)+theme(axis.text.x=element_text(angle=90,size=10)+facet_wrap(~ mes,nrow=2,ncol=6)+labs(y="Vel. viento prom. x hora [m/s] 10 m altura")+geom_hline(yintercept=3.0, col="red")
+dev.copy(png,file="plotmeshora.png",width=1600,height=800)
+dev.off()
