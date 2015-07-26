@@ -1,0 +1,9 @@
+# First draft for convert coordinates of points in CSV file to a real points in a SHAPE
+# You need to have a CSV files with UTM coordinates of points, column A: West; B: North (Datum WGS84)
+install.packages("shapefiles")
+library(shapefiles)
+a<-read.csv("puntos.csv",sep=",",header=F)
+dd <- data.frame(1:nrow(a),a)
+ddTable <- data.frame(Id=dd[,1],name=dd[,1])
+ddShapefile <- convert.to.shapefile(dd, ddTable, "Id", 1)
+write.shapefile(ddShapefile, "puntos",arcgis=T)
