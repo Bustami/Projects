@@ -1,0 +1,93 @@
+# Read the Noise data (CSV file) with intervals of 1 second
+# Column 1: Date
+# Column 2: Time
+# Column 3: LASmax
+# Column 4: LAeq
+# Column 5: LZeq
+rawdata<-read.csv("MC.csv",sep=",",header=T,stringsAsFactors=F)
+
+library(dplyr)
+# Create a Data&Time variable
+x<-strptime(paste(rawdata[,1], rawdata[,2], sep=" "), "%d/%m/%Y %H:%M:%S")
+# Select only noise data
+L<-as.data.frame(select(rawdata,c(LASMax,LAeq,LZeq)))
+
+# Day 1 (select since 2016-02-24 17:00:00 until 2016-02-25 16:59:59) = 24 hours
+hi<-"2016-02-24 17:00:00"
+hf<-"2016-02-25 16:59:59"
+# Levels of 24 hours
+dia1<-L[which(x==hi):which(x==hf),]
+
+# Graph of LAeq each 1 second
+par(mar = c(6, 7, 1, 2))
+plot(x[which(x==hi):which(x==hf)], dia1$LAeq, type='l', ylim=c(40,85), xlab='', ylab='', col="darkblue", cex.axis=1.7)
+mtext("Tiempo [hh:mm]", side=1, line=4, col="black", cex=1.5)
+mtext("Leq,1s [dB(A)]", side=2, line=4, col="black", cex=1.5)
+
+
+# Calculate of LDN descriptor
+
+# LAeq since "hi" until 22 hours (both from first day)
+I1AD<-which(x==hi)
+F1AD<-which(x=="2016-02-24 22:00:00")
+E1AD<-10^(L[I1AD:F1AD,1]/10)
+L1AD<-10*log10(mean(E1AD, na.rm=T))
+
+# LAeq since 07 second day until the same beginning hour of first day
+I1BD<-which(x=="2016-02-25 07:00:00")
+F1BD<-which(x==hf)
+E1BD<-10^(L[I1BD:F1BD,1]/10)
+L1BD<-10*log10(mean(E1BD, na.rm=T))
+
+# LD
+LD1<-10*log10(mean(c(10^(L1AD/10),10^(L1BD/10))))
+
+# LAeq since 22 first day until 07 second day
+I1N<-which(x=="2016-02-24 22:00:00")
+F1N<-which(x=="2016-02-25 06:59:59")
+E1N<-10^(dia1[I1N:F1N,1]/10)
+
+# LN
+LN1<-10*log10(mean(E1N))
+
+#LDN
+LDN1<-10*log10((1/24)*((10^(LD1/10)*15 + 10^((LN1+10)/10)*9)))
+
+# Calculate of LAeq(h)
+LH<-data.frame(1:24)
+for (h in 17:23)
+{
+        I<-which(x==paste0("2016-02-24 ",h,":00:00"))
+        F<-which(x==paste0("2016-02-24 ",h,":59:59"))
+        E<-10^(L[I:F,1]/10)
+        LH[h+1,1]<-10*log10(mean(E, na.rm=T))
+}
+
+for (h in 0:16)
+{
+        if (h<10)
+        {
+                I<-which(x==paste0("2016-02-25 0",h,":00:00"))
+                F<-which(x==paste0("2016-02-25 0",h,":59:59"))   
+        }
+        else
+        {
+                I<-which(x==paste0("2016-02-25 ",h,":00:00"))
+                F<-which(x==paste0("2016-02-25 ",h,":59:59"))
+        }
+        E<-10^(L[I:F,1]/10)
+        LH[h+1,1]<-10*log10(mean(E, na.rm=T))
+}
+# Max level
+max_Leq<-max(LH)
+# Hour with the max level
+hora_max_Leq<-which.max(LH[,1])-1
+
+# Graph of level by each hour
+par(mar = c(7, 7, 0, 0))
+p<-barplot(LH[,1], col="darkblue", ylim=c(55,max(LH)*1.1), las=2, cex.names = 2, cex.axis=2, names.arg=0:23, xlab='', ylab='', xpd = FALSE)
+text(x=p, y=LH[,1], label=round(LH[,1],1), pos=3, cex=1.7, col="red")
+mtext("Hora", side=1, line=5, col="black", cex=1.5)
+mtext("Leq(h) [dB(A)]", side=2, line=4, col="black", cex=1.5)
+
+## Export the graph with a minimal Width of 1024 pixels (maintain the aspect ratio)
